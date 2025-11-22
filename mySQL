@@ -1,0 +1,81 @@
+CREATE DATABASE safecomply_db
+CHARACTER SET utf8mb4
+COLLATE utf8mb4_unicode_ci;
+USE safecomply_db;
+
+CREATE TABLE users (
+    user_id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(150) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('employee','auditor','admin') NOT NULL DEFAULT 'employee',
+    department VARCHAR(100),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_login DATETIME
+);
+
+CREATE TABLE devices (
+    device_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    device_uuid VARCHAR(255) NOT NULL,
+    mac_address VARCHAR(50),
+    os_type VARCHAR(50),
+    browser VARCHAR(100),
+    device_name VARCHAR(150),
+    status ENUM('active','revoked') DEFAULT 'active',
+    first_registered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_used_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+
+CREATE TABLE password_policies (
+    policy_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    min_length INT DEFAULT 8,
+    require_numbers BOOLEAN DEFAULT TRUE,
+    require_special BOOLEAN DEFAULT TRUE,
+    require_uppercase BOOLEAN DEFAULT TRUE,
+    max_password_age INT DEFAULT 90,
+    last_changed_at DATETIME,
+    status ENUM('active','disabled') DEFAULT 'active',
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE backup_policies (
+    backup_id INT AUTO_INCREMENT PRIMARY KEY,
+    device_id INT NOT NULL,
+    backup_frequency ENUM('daily','weekly','monthly') DEFAULT 'weekly',
+    last_backup_at DATETIME,
+    backup_method VARCHAR(100),
+    storage_location VARCHAR(255),
+    retention_days INT DEFAULT 30,
+    status ENUM('compliant','non_compliant') DEFAULT 'compliant',
+    FOREIGN KEY (device_id) REFERENCES devices(device_id)
+);
+
+CREATE TABLE compliance_logs (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    policy_id INT NOT NULL,
+    device_id INT,
+    compliance_status ENUM('compliant','non_compliant','warning') NOT NULL,
+    score INT,
+    checked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    notes TEXT,
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (policy_id) REFERENCES policies(policy_id),
+    FOREIGN KEY (device_id) REFERENCES devices(device_id)
+);
+
+CREATE TABLE ai_logs (
+    ai_log_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    risk_level ENUM('low','medium','high') DEFAULT 'low',
+    prediction VARCHAR(255),
+    confidence FLOAT,
+    triggered_policy INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (triggered_policy) REFERENCES policies(policy_id)
+);
