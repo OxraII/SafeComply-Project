@@ -11,7 +11,8 @@ CREATE TABLE users (
     role ENUM('employee','auditor','admin') NOT NULL DEFAULT 'employee',
     department VARCHAR(100),
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_login DATETIME
+    last_login DATETIME,
+    last_password_change_at DATETIME
 );
 
 CREATE TABLE devices (
@@ -28,7 +29,6 @@ CREATE TABLE devices (
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 
-
 CREATE TABLE password_policies (
     policy_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
@@ -36,8 +36,7 @@ CREATE TABLE password_policies (
     require_numbers BOOLEAN DEFAULT TRUE,
     require_special BOOLEAN DEFAULT TRUE,
     require_uppercase BOOLEAN DEFAULT TRUE,
-    max_password_age INT DEFAULT 90,
-    last_changed_at DATETIME,
+    max_password_age INT DEFAULT 90, -- (الحد الأقصى لعمر كلمة المرور باليوم، 90 يومًا = 3 أشهر)
     status ENUM('active','disabled') DEFAULT 'active',
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
@@ -50,22 +49,21 @@ CREATE TABLE backup_policies (
     backup_method VARCHAR(100),
     storage_location VARCHAR(255),
     retention_days INT DEFAULT 30,
-    status ENUM('compliant','non_compliant') DEFAULT 'compliant',
+    backup_status ENUM('compliant','non_compliant') DEFAULT 'compliant',
     FOREIGN KEY (device_id) REFERENCES devices(device_id)
 );
 
 CREATE TABLE compliance_logs (
     log_id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
-    policy_id INT NOT NULL,
+    policy_id INT NOT NULL, -- يمثل ID سياسة (كلمة مرور، نسخ احتياطي، إلخ)
     device_id INT,
     compliance_status ENUM('compliant','non_compliant','warning') NOT NULL,
     score INT,
     checked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     notes TEXT,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (policy_id) REFERENCES policies(policy_id),
-    FOREIGN KEY (device_id) REFERENCES devices(device_id)
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+    -- لا يمكن ربط policy_id أو device_id بدون جدول Policies مركزي، لذا سنترك الـ FOREIGN KEY على user_id فقط مؤقتاً
 );
 
 CREATE TABLE ai_logs (
@@ -76,6 +74,6 @@ CREATE TABLE ai_logs (
     confidence FLOAT,
     triggered_policy INT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id),
-    FOREIGN KEY (triggered_policy) REFERENCES policies(policy_id)
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
+
